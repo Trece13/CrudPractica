@@ -22,7 +22,7 @@ namespace CrudPractica.Infrastructure.Repositories
 
         public async Task<Product> CreateAsync(Product product)
         {
-            _context.Products.AddAsync(product);
+            _context.Products.Add(product);
             await _context.SaveChangesAsync();
             return product;
 
@@ -45,7 +45,9 @@ namespace CrudPractica.Infrastructure.Repositories
         public async Task<Product?> GetByIdAsync(int id)
         {
             return await _context.Products
-                            .FirstOrDefaultAsync(p => p.Id == id);
+                .AsNoTracking()
+                .Include(p => p.Categories)
+                .FirstOrDefaultAsync(p => p.Id == id);
         }
 
         public async Task UpdateAsync(Product product)
@@ -96,6 +98,18 @@ namespace CrudPractica.Infrastructure.Repositories
                 Page = page,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<Product?> GetByIdWithCategoriesAsync(int id)
+        {
+            return await _context.Products
+                .Include(p => p.Categories)
+                .FirstOrDefaultAsync(p => p.Id == id);
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

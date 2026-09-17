@@ -1196,3 +1196,19 @@ dotnet ef migrations add AddProductCategories --project CrudPractica.Infrastruct
 --- aplicamos al migracion 
 
 dotnet ef database update --project CrudPractica.Infrastructure --startup-project CrudPractica.Api --context PollitoDbContext
+
+-----
+el create de categorias
+
+{
+      name:"teclados"
+}
+el create de productos ya pude recibir
+
+{
+  "name": "Teclado Logitech",
+  "description": "Teclado mecánico",
+  "price": 280000,
+  "quantity": 10,
+  "categoryIds": [1, 2, 3]
+}
