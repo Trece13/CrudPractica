@@ -1160,3 +1160,31 @@ ejecutar API + MVC
 ```
 
 No crear nuevamente una migration que ya está versionada en el repositorio.
+
+
+# ¿Qué hay instalado?
+dotnet --list-sdks
+dotnet --info
+
+# ¿Qué versión utiliza el proyecto?
+# Revisar:
+<TargetFramework>net7.0</TargetFramework>
+<TargetFramework>net8.0</TargetFramework>
+<TargetFramework>net9.0</TargetFramework>
+
+# Proyecto existente
+dotnet restore
+dotnet build
+
+# EF
+dotnet ef --version
+
+# SQL/LocalDB
+sqlcmd -?
+sqllocaldb info
+
+# Primera migración
+dotnet ef migrations add InitialCreate --project CrudPractica.Infrastructure --startup-project CrudPractica.Api --context PollitoDbContext
+
+# Aplicar a BD
+dotnet ef database update --project CrudPractica.Infrastructure --startup-project CrudPractica.Api --context PollitoDbContext
