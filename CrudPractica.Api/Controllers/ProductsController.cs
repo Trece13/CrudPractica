@@ -1,136 +1,244 @@
 ﻿using CrudPractica.Application.Common;
 using CrudPractica.Application.DTOs;
-using CrudPractica.Application.Interfaces;
 using CrudPractica.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http.Json;
 
-namespace CrudPractica.Api.Controllers
+namespace CrudPractica.MvcApi.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ProductsController : ControllerBase
+    public class ProductsController : Controller
     {
-        private readonly IProductService _productService;
+        private readonly HttpClient _httpClient;
 
-        public ProductsController(IProductService productService)
+        public ProductsController(IHttpClientFactory httpClientFactory)
         {
-            _productService = productService;
-        }
-
-        // =========================================================
-        // GET: api/Products
-        // =========================================================
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetAll()
-        {
-            var products = await _productService.GetAllAsync();
-
-            return Ok(products);
+            _httpClient = httpClientFactory.CreateClient("ProductsApi");
         }
 
 
         // =========================================================
-        // GET: api/Products/5
-        // Devuelve ProductResponseDto con las categorías
+        // INDEX
+        // Búsqueda + paginación
         // =========================================================
-        [HttpGet("{id}")]
-        public async Task<ActionResult<ProductResponseDto>> GetById(int id)
-        {
-            var product = await _productService.GetByIdAsync(id);
-
-            if (product == null)
-                return NotFound();
-
-            return Ok(product);
-        }
-
-
-        // =========================================================
-        // GET: api/Products/paged?search=mouse&page=1&pageSize=5
-        // =========================================================
-        [HttpGet("paged")]
-        public async Task<IActionResult> GetPaged(
+        public async Task<IActionResult> Index(
             string? search,
             int page = 1,
             int pageSize = 5)
         {
-            var result = await _productService.GetPagedAsync(
-                search,
-                page,
-                pageSize);
+            var url =
+                $"api/Products/paged?page={page}&pageSize={pageSize}";
 
-            return Ok(result);
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                url += $"&search={Uri.EscapeDataString(search)}";
+            }
+
+            var result =
+                await _httpClient
+                    .GetFromJsonAsync<PagedResult<Product>>(url);
+
+            ViewBag.Search = search;
+
+            return View(result);
         }
 
 
         // =========================================================
-        // POST: api/Products
-        // Recibe CreateProductDto
-        //
-        // Ejemplo:
-        // {
-        //   "name": "Teclado",
-        //   "description": "Teclado mecánico",
-        //   "price": 250000,
-        //   "quantity": 10,
-        //   "categoryIds": [1, 2]
-        // }
+        // DETAILS
+        // =========================================================
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id == null)
+                return NotFound();
+
+            var product =
+                await _httpClient
+                    .GetFromJsonAsync<ProductResponseDto>(
+                        $"api/Products/{id}");
+
+            if (product == null)
+                return NotFound();
+
+            return View(product);
+        }
+
+
+        // =========================================================
+        // CREATE GET
+        // =========================================================
+        [HttpGet]
+        public async Task<IActionResult> Create()
+        {
+            await LoadCategoriesAsync();
+
+            return View(new CreateProductDto());
+        }
+
+
+        // =========================================================
+        // CREATE POST
         // =========================================================
         [HttpPost]
-        public async Task<ActionResult<Product>> Create(
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(
             CreateProductDto dto)
         {
-            var product = await _productService.CreateAsync(dto);
+            if (!ModelState.IsValid)
+            {
+                await LoadCategoriesAsync();
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = product.Id },
-                product);
+                return View(dto);
+            }
+
+            var response =
+                await _httpClient.PostAsJsonAsync(
+                    "api/Products",
+                    dto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            ModelState.AddModelError(
+                "",
+                "No fue posible crear el producto.");
+
+            await LoadCategoriesAsync();
+
+            return View(dto);
         }
 
 
         // =========================================================
-        // PUT: api/Products/5
-        //
-        // Ejemplo:
-        // {
-        //   "id": 5,
-        //   "name": "Teclado Pro",
-        //   "description": "Teclado mecánico RGB",
-        //   "price": 300000,
-        //   "quantity": 8,
-        //   "categoryIds": [1, 3]
-        // }
+        // EDIT GET
         // =========================================================
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(
+        [HttpGet]
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null)
+                return NotFound();
+
+            var product =
+                await _httpClient
+                    .GetFromJsonAsync<ProductResponseDto>(
+                        $"api/Products/{id}");
+
+            if (product == null)
+                return NotFound();
+
+            await LoadCategoriesAsync();
+
+            var model = new UpdateProductDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                Quantity = product.Quantity,
+
+                CategoryIds = product.Categories
+                    .Select(c => c.Id)
+                    .ToList()
+            };
+
+            return View(model);
+        }
+
+
+        // =========================================================
+        // EDIT POST
+        // =========================================================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(
             int id,
             UpdateProductDto dto)
         {
             if (id != dto.Id)
-                return BadRequest("El id de la URL no coincide con el producto.");
-
-            var updated = await _productService.UpdateAsync(id, dto);
-
-            if (!updated)
                 return NotFound();
 
-            return NoContent();
+            if (!ModelState.IsValid)
+            {
+                await LoadCategoriesAsync();
+
+                return View(dto);
+            }
+
+            var response =
+                await _httpClient.PutAsJsonAsync(
+                    $"api/Products/{id}",
+                    dto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            ModelState.AddModelError(
+                "",
+                "No fue posible actualizar el producto.");
+
+            await LoadCategoriesAsync();
+
+            return View(dto);
         }
 
 
         // =========================================================
-        // DELETE: api/Products/5
+        // DELETE GET
         // =========================================================
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpGet]
+        public async Task<IActionResult> Delete(int? id)
         {
-            var deleted = await _productService.DeleteAsync(id);
-
-            if (!deleted)
+            if (id == null)
                 return NotFound();
 
-            return NoContent();
+            var product =
+                await _httpClient
+                    .GetFromJsonAsync<ProductResponseDto>(
+                        $"api/Products/{id}");
+
+            if (product == null)
+                return NotFound();
+
+            return View(product);
+        }
+
+
+        // =========================================================
+        // DELETE POST
+        // =========================================================
+        [HttpPost]
+        [ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var response =
+                await _httpClient.DeleteAsync(
+                    $"api/Products/{id}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return NotFound();
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+
+        // =========================================================
+        // MÉTODO PRIVADO PARA CARGAR CATEGORÍAS
+        // =========================================================
+        private async Task LoadCategoriesAsync()
+        {
+            var categories =
+                await _httpClient
+                    .GetFromJsonAsync<List<CategoryDto>>(
+                        "api/Categories");
+
+            ViewBag.Categories =
+                categories ?? new List<CategoryDto>();
         }
     }
 }
