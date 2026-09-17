@@ -1,0 +1,87 @@
+@* @model IEnumerable<CrudPractica.Domain.Entities.Product> *@
+@model CrudPractica.Application.Common.PagedResult<CrudPractica.Domain.Entities.Product>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.Items) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Description)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Price)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Quantity)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+<p>
+    Página @Model.Page de @Model.TotalPages
+    - Total registros: @Model.TotalCount
+</p>
+@if (Model.Page > 1)
+{
+    <a asp-action="Index"
+       asp-route-search="@ViewBag.Search"
+       asp-route-page="@(Model.Page - 1)"
+       asp-route-pageSize="@Model.PageSize"
+       class="btn btn-secondary">
+
+        Anterior
+
+    </a>
+}
+@if (Model.Page < Model.TotalPages)
+{
+    <a asp-action="Index"
+       asp-route-search="@ViewBag.Search"
+       asp-route-page="@(Model.Page + 1)"
+       asp-route-pageSize="@Model.PageSize"
+       class="btn btn-secondary">
+
+        Siguiente
+
+    </a>
+}
+
+@for (int i = 1; i <= Model.TotalPages; i++)
+{
+    <a asp-action="Index"
+       asp-route-search="@ViewBag.Search"
+       asp-route-page="@i"
+       asp-route-pageSize="@Model.PageSize"
+       class="btn @(i == Model.Page ? "btn-primary" : "btn-outline-primary")">
+
+        @i
+
+    </a>
+}
