@@ -1188,3 +1188,11 @@ dotnet ef migrations add InitialCreate --project CrudPractica.Infrastructure --s
 
 # Aplicar a BD
 dotnet ef database update --project CrudPractica.Infrastructure --startup-project CrudPractica.Api --context PollitoDbContext
+
+
+--- ultima migracio n a n
+dotnet ef migrations add AddProductCategories --project CrudPractica.Infrastructure --startup-project CrudPractica.Api --context AppContext
+
+--- aplicamos al migracion 
+
+dotnet ef database update --project CrudPractica.Infrastructure --startup-project CrudPractica.Api --context PollitoDbContext
